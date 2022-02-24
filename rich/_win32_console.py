@@ -164,19 +164,19 @@ else:
 
     class LegacyWindowsTerm:
 
-        # WINDOWS_COLORS = {
-        #     "black": 0,
-        #     "blue": 1,
-        #     "green": 2,
-        #     "cyan": 3,
-        #     "red": 4,
-        #     "magenta": 5,
-        #     "yellow": 6,
-        #     "grey": 7,
-        # }
+        # The colour bits are defined in wincon.h as follows...
+        # define FOREGROUND_BLUE            0x0001 -- 0000 0001
+        # define FOREGROUND_GREEN           0x0002 -- 0000 0010
+        # define FOREGROUND_RED             0x0004 -- 0000 0100
+        # define FOREGROUND_INTENSITY       0x0008 -- 0000 1000
+        # define BACKGROUND_BLUE            0x0010 -- 0001 0000
+        # define BACKGROUND_GREEN           0x0020 -- 0010 0000
+        # define BACKGROUND_RED             0x0040 -- 0100 0000
+        # define BACKGROUND_INTENSITY       0x0080 -- 1000 0000
 
         # Keys are ANSI color numbers, values are the corresponding Windows Console API color numbers
-        ANSI_TO_WINDOWS = {0: 0, 1: 4, 2: 2, 3: 6, 4: 1, 5: 5, 6: 3, 7: 7}
+        # ANSI_TO_WINDOWS = {0: 0, 1: 4, 2: 2, 3: 6, 4: 1, 5: 5, 6: 3, 7: 7}
+        ANSI_TO_WINDOWS = [0, 4, 2, 6, 1, 5, 6, 7, 8, 12, 10, 14, 9, 13, 14, 15, 16]
 
         def __init__(self, file: IO[str] = sys.stdout):
             self.file = file
@@ -211,15 +211,18 @@ else:
             self.flush()
 
         def write_styled(self, text: str, style: Style) -> None:
+            # TODO: Outstanding issue - colors mapping incorrectly?
+            # TODO: Outstanding issue - after downgrading, can the number still be None?
             if style.color:
                 fore = style.color.downgrade(ColorSystem.WINDOWS).number
-                fore = self.ANSI_TO_WINDOWS.get(fore, self._default_fore)
+                fore = self.ANSI_TO_WINDOWS[fore or 7]
             else:
                 fore = self._default_fore
 
             if style.bgcolor:
                 back = style.bgcolor.downgrade(ColorSystem.WINDOWS).number
-                back = self.ANSI_TO_WINDOWS.get(back, self._default_back)
+                # TODO: number can be None - why?
+                back = self.ANSI_TO_WINDOWS[back or 0]
             else:
                 back = self._default_back
 
@@ -278,38 +281,10 @@ else:
         console = Console()
         text = Text("Hello world!", style=style)
         console.print(text)
-
-        # console.print("[bold green]Hello world!")
-        # console.print("[italic cyan]Hello world!")
-        # console.print("[bold black on blue]Hello world!")
-        # console.print("[bold black on cyan]Hello world!")
-        # console.print("[black on green]Hello world!")
-        # console.print("[blue on green]Hello world!")
-        # console.print("[#1BB152 on #DA812D]Hello\nworld!")
-
-        term = LegacyWindowsTerm()
-        # print("0. Initial position:", term.cursor_position)
-        # term.write_styled("Hello, world!", style)
-        # print("1. After write_styled:", term.cursor_position)
-        # term.move_cursor_up()
-        # print("2. After move_cursor_up:", term.cursor_position)
-        # term.write_styled("2nd", style)
-        # print("3. After write_styled:", term.cursor_position)
-        # term.erase_end_of_line()
-
-        term.write_text("Hello, world!")
-        print()
-        print()
-        print()
-        print()
-        print()
-        print("1", term.cursor_position)
-        print("aksjdlaskjd", end="")
-        term.move_cursor_up()
-        term.move_cursor_up()
-        term.move_cursor_up()
-        term.move_cursor_up()
-        term.move_cursor_up()
-        print("2", term.cursor_position, end="")
-        term.move_cursor_up()
-        print("3", term.cursor_position, end="")
+        console.print("[bold green]Hello world!")
+        console.print("[italic cyan]Hello world!")
+        console.print("[bold black on blue]Hello world!")
+        console.print("[bold black on cyan]Hello world!")
+        console.print("[black on green]Hello world!")
+        console.print("[blue on green]Hello world!")
+        console.print("[#1BB152 on #DA812D]Hello\nworld!")
