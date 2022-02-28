@@ -7,7 +7,6 @@ from rich.segment import ControlCode, ControlType, Segment
 def legacy_windows_render(buffer: Iterable[Segment], file: IO[str]) -> None:
     term = LegacyWindowsTerm(file)
     for segment in buffer:
-        # print("/", end="")
         text, style, control = segment
 
         if not control:
@@ -37,5 +36,3 @@ def legacy_windows_render(buffer: Iterable[Segment], file: IO[str]) -> None:
                         term.erase_start_of_Line()
                     elif mode == 2:
                         term.erase_line()
-
-        # print(f"/[{segment}]", end="")

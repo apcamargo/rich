@@ -164,7 +164,7 @@ else:
 
     class LegacyWindowsTerm:
 
-        # The colour bits are defined in wincon.h as follows...
+        # The Windows colours are defined in wincon.h as follows...
         # define FOREGROUND_BLUE            0x0001 -- 0000 0001
         # define FOREGROUND_GREEN           0x0002 -- 0000 0010
         # define FOREGROUND_RED             0x0004 -- 0000 0100
@@ -174,9 +174,25 @@ else:
         # define BACKGROUND_RED             0x0040 -- 0100 0000
         # define BACKGROUND_INTENSITY       0x0080 -- 1000 0000
 
-        # Keys are ANSI color numbers, values are the corresponding Windows Console API color numbers
-        # ANSI_TO_WINDOWS = {0: 0, 1: 4, 2: 2, 3: 6, 4: 1, 5: 5, 6: 3, 7: 7}
-        ANSI_TO_WINDOWS = [0, 4, 2, 6, 1, 5, 6, 7, 8, 12, 10, 14, 9, 13, 14, 15, 16]
+        # Indices are ANSI color numbers, values are the corresponding Windows Console API color numbers
+        ANSI_TO_WINDOWS = [
+            0,  # black
+            4,  # red
+            2,  # green
+            6,  # yellow
+            1,  # blue
+            5,  # magenta
+            3,  # cyan
+            7,  # white
+            8,  # bright black (grey)
+            12,  # bright red
+            10,  # bright green
+            14,  # bright yellow
+            9,  # bright blue
+            13,  # bright magenta
+            11,  # bright cyan
+            15,  # bright white
+        ]
 
         def __init__(self, file: IO[str] = sys.stdout):
             self.file = file
@@ -187,8 +203,6 @@ else:
 
             self._default_fore = default_text & 7
             self._default_back = (default_text >> 4) & 7
-            # self._style = default_text & (WinStyle.BRIGHT | WinStyle.BRIGHT_BACKGROUND)
-
             self._default_attrs = self._default_fore + self._default_back * 16
 
             self.write = file.write
@@ -211,18 +225,15 @@ else:
             self.flush()
 
         def write_styled(self, text: str, style: Style) -> None:
-            # TODO: Outstanding issue - colors mapping incorrectly?
-            # TODO: Outstanding issue - after downgrading, can the number still be None?
             if style.color:
                 fore = style.color.downgrade(ColorSystem.WINDOWS).number
-                fore = self.ANSI_TO_WINDOWS[fore or 7]
+                fore = self.ANSI_TO_WINDOWS[fore if fore is not None else 7]
             else:
                 fore = self._default_fore
 
             if style.bgcolor:
                 back = style.bgcolor.downgrade(ColorSystem.WINDOWS).number
-                # TODO: number can be None - why?
-                back = self.ANSI_TO_WINDOWS[back or 0]
+                back = self.ANSI_TO_WINDOWS[back if back is not None else 0]
             else:
                 back = self._default_back
 
@@ -270,9 +281,6 @@ else:
         handle = GetStdHandle()
         console_mode = wintypes.DWORD()
         GetConsoleMode(handle, console_mode)
-        # print(console_mode.value)
-
-        # FillConsoleOutputCharacter(handle, "X", 20, WindowsCoordinates(row=10, col=10))
 
         style = Style(color="black", bgcolor="red")
 
@@ -281,10 +289,12 @@ else:
         console = Console()
         text = Text("Hello world!", style=style)
         console.print(text)
-        console.print("[bold green]Hello world!")
-        console.print("[italic cyan]Hello world!")
-        console.print("[bold black on blue]Hello world!")
-        console.print("[bold black on cyan]Hello world!")
-        console.print("[black on green]Hello world!")
-        console.print("[blue on green]Hello world!")
-        console.print("[#1BB152 on #DA812D]Hello\nworld!")
+        console.print("[bold green]bold green!")
+        console.print("[italic cyan]italic cyan!")
+        console.print("[bold white on blue]bold white on blue!")
+        console.print("[bold black on cyan]bold black on cyan!")
+        console.print("[black on green]black on green!")
+        console.print("[blue on green]blue on green!")
+        console.print("[white on black]white on black!")
+        console.print("[black on white]black on white!")
+        console.print("[#1BB152 on #DA812D]#1BB152 on #DA812D!")
