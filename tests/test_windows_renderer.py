@@ -1,4 +1,4 @@
-from unittest.mock import PropertyMock, call, create_autospec
+from unittest.mock import call, create_autospec
 
 import pytest
 
@@ -102,7 +102,7 @@ def test_control_erase_line(legacy_term_mock, erase_mode, method_name):
     getattr(legacy_term_mock, method_name).assert_called_once_with()
 
 
-def test_show_cursor(legacy_term_mock):
+def test_control_show_cursor(legacy_term_mock):
     buffer = [Segment("", None, [(ControlType.SHOW_CURSOR,)])]
 
     legacy_windows_render(buffer, legacy_term_mock)
@@ -110,9 +110,17 @@ def test_show_cursor(legacy_term_mock):
     legacy_term_mock.show_cursor.assert_called_once_with()
 
 
-def test_hide_cursor(legacy_term_mock):
+def test_control_hide_cursor(legacy_term_mock):
     buffer = [Segment("", None, [(ControlType.HIDE_CURSOR,)])]
 
     legacy_windows_render(buffer, legacy_term_mock)
 
     legacy_term_mock.hide_cursor.assert_called_once_with()
+
+
+def test_control_cursor_move_to_column(legacy_term_mock):
+    buffer = [Segment("", None, [(ControlType.CURSOR_MOVE_TO_COLUMN, 3)])]
+
+    legacy_windows_render(buffer, legacy_term_mock)
+
+    legacy_term_mock.move_cursor_to_column.assert_called_once_with(2)

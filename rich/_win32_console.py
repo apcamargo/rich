@@ -1,7 +1,6 @@
 """Light wrapper around the win32 Console API"""
 import sys
 import time
-from ctypes.wintypes import BOOL, DWORD
 from typing import NamedTuple
 from typing.io import IO
 
@@ -92,12 +91,11 @@ else:
         char = ctypes.c_char(char.encode())
         length = wintypes.DWORD(length)
         num_written = wintypes.DWORD(0)
-        x, y = start
         _FillConsoleOutputCharacterW(
             std_handle,
             char,
             length,
-            WindowsCoordinates(row=y, col=x),
+            start,
             byref(num_written),
         )
         return num_written.value
@@ -231,23 +229,40 @@ else:
 
         @property
         def cursor_position(self) -> WindowsCoordinates:
-            """Returns the current position of the cursor (0-based)"""
+            """Returns the current position of the cursor (0-based)
+
+            Returns:
+                WindowsCoordinates: The current cursor position.
+            """
             coord: COORD = GetConsoleScreenBufferInfo(self._handle).dwCursorPosition
             return WindowsCoordinates(row=coord.Y, col=coord.X)
 
         @property
         def screen_size(self) -> WindowsCoordinates:
-            """Returns the current size of the console screen buffer, in character columns and rows"""
+            """Returns the current size of the console screen buffer, in character columns and rows
+
+            Returns:
+                WindowsCoordinates: The width and height of the screen as WindowsCoordinates.
+            """
             screen_size: COORD = GetConsoleScreenBufferInfo(self._handle).dwSize
             return WindowsCoordinates(row=screen_size.Y, col=screen_size.X)
 
         def write_text(self, text: str) -> None:
-            """Write text directly to the terminal without any modification of styles"""
+            """Write text directly to the terminal without any modification of styles
+
+            Args:
+                text (str): The text to write to the console
+            """
             self.write(text)
             self.flush()
 
         def write_styled(self, text: str, style: Style) -> None:
-            """Write styled text to the terminal"""
+            """Write styled text to the terminal
+
+            Args:
+                text (str): The text to write
+                style (Style): The style of the text
+            """
             # TODO: Check for bold, bright, etc. inside the style
             if style.color:
                 fore = style.color.downgrade(ColorSystem.WINDOWS).number
@@ -270,7 +285,11 @@ else:
             SetConsoleTextAttribute(self._handle, attributes=self._default_text)
 
         def move_cursor_to(self, new_position: WindowsCoordinates) -> None:
-            """Set the position of the cursor"""
+            """Set the position of the cursor
+
+            Args:
+                new_position (WindowsCoordinates): The WindowsCoordinates representing the new position of the cursor.
+            """
             SetConsoleCursorPosition(self._handle, new_position)
 
         def erase_line(self) -> None:
@@ -278,25 +297,42 @@ else:
             screen_size = self.screen_size
             cursor_position = self.cursor_position
             cells_to_erase = screen_size.col
-            start_coordinates = WindowsCoordinates(cursor_position.row, 0)
+            start_coordinates = WindowsCoordinates(row=cursor_position.row, col=0)
+            # print(cells_to_erase, start_coordinates)
+
+            # TODO: We need to set the console output attribute ti
             FillConsoleOutputCharacter(
-                self._handle, " ", cells_to_erase, start_coordinates
+                self._handle, " ", length=cells_to_erase, start=start_coordinates
+            )
+            FillConsoleOutputAttribute(
+                self._handle,
+                self._default_attrs,
+                length=cells_to_erase,
+                start=start_coordinates,
             )
 
         def erase_end_of_line(self) -> None:
             """Erase all content from the cursor position to the end of that line"""
             cursor_position = self.cursor_position
             cells_to_erase = self.screen_size.col - cursor_position.col
+            # TODO: We need to fill the console output attributes too, in here and other erase methods
             FillConsoleOutputCharacter(
                 self._handle, " ", cells_to_erase, cursor_position
+            )
+            FillConsoleOutputAttribute(
+                self._handle,
+                self._default_attrs,
+                length=cells_to_erase,
+                start=cursor_position,
             )
 
         def erase_start_of_line(self) -> None:
             """Erase all content from the cursor position to the start of that line"""
-            cursor_position = self.cursor_position
-            cells_to_erase = self.screen_size.col - cursor_position.col
-            FillConsoleOutputCharacter(
-                self._handle, " ", cells_to_erase, cursor_position
+            row, col = self.cursor_position
+            start = WindowsCoordinates(row, 0)
+            FillConsoleOutputCharacter(self._handle, " ", col, start)
+            FillConsoleOutputAttribute(
+                self._handle, self._default_attrs, length=col, start=start
             )
 
         def move_cursor_up(self) -> None:
@@ -330,6 +366,15 @@ else:
                 col += 1
             SetConsoleCursorPosition(self._handle, WindowsCoordinates(row=row, col=col))
 
+        def move_cursor_to_column(self, column: int) -> None:
+            """Move cursor to the column specified by the zero-based column index, staying on the same row
+
+            Args:
+                column (int): The zero-based column index to move the cursor to.
+            """
+            row, _ = self.cursor_position
+            SetConsoleCursorPosition(self._handle, WindowsCoordinates(row, column))
+
         def move_cursor_backward(self) -> None:
             """Move the cursor backward a single cell. Wrap to the previous line if required."""
             row, col = self.cursor_position
@@ -355,9 +400,13 @@ else:
             SetConsoleCursorInfo(self._handle, visible_cursor)
 
         def set_title(self, title: str) -> None:
-            """Set the title of the terminal window"""
+            """Set the title of the terminal window
+
+            Args:
+                title (str): The new title of the console window
+            """
             assert len(title) < 255, "Console title must be less than 255 characters"
-            _SetConsoleTitle(title)
+            SetConsoleTitle(title)
 
     if __name__ == "__main__":
         handle = GetStdHandle()
@@ -373,6 +422,11 @@ else:
 
         style = Style(color="black", bgcolor="red")
 
+        heading = Style.parse("black on green")
+
+        # Check colour output
+        console.rule("Checking colour output")
+        # console.print("Checking colour output", style=Style.parse("black on green"))
         text = Text("Hello world!", style=style)
         console.print(text)
         console.print("[bold green]bold green!")
@@ -386,15 +440,15 @@ else:
         console.print("[black on white]black on white!")
         console.print("[#1BB152 on #DA812D]#1BB152 on #DA812D!")
 
+        # Check cursor movement
+        console.rule("Checking cursor movement")
+        console.print()
         term.move_cursor_backward()
         term.move_cursor_backward()
-        term.write_text("went back and wrapped up")
-        time.sleep(1)
-        term.move_cursor_down()
-        term.write_text("now down")
+        term.write_text("went back and wrapped to prev line")
         time.sleep(1)
         term.move_cursor_up()
-        term.write_text("and up")
+        term.write_text("we go up")
         time.sleep(1)
         term.show_cursor()
         term.move_cursor_down()
@@ -409,5 +463,40 @@ else:
         term.move_cursor_backward()
         term.move_cursor_backward()
         term.write_text("we went down and back 2")
+        time.sleep(1)
 
+        # Check erasing of lines
+        term.hide_cursor()
+        console.print()
+        console.rule("Checking line erasing")
+        console.print("\n...Deleting to the start of the line...")
+        term.write_text(
+            "The red arrow shows the cursor location, and direction of erase"
+        )
+        time.sleep(1)
+        term.move_cursor_to_column(16)
+        term.write_styled("<", Style.parse("black on red"))
+        term.move_cursor_backward()
+        time.sleep(1)
+        term.erase_start_of_line()
+        time.sleep(1)
+
+        console.print("\n\n...And to the end of the line...")
+        term.write_text(
+            "The red arrow shows the cursor location, and direction of erase"
+        )
+        time.sleep(1)
+
+        term.move_cursor_to_column(16)
+        term.write_styled(">", Style.parse("black on red"))
+        time.sleep(1)
+        term.erase_end_of_line()
+        time.sleep(1)
+
+        console.print("\n\n...Now the whole line will be erased...")
+        term.write_styled("I'm going to disappear!", style=Style.parse("black on cyan"))
+        time.sleep(1)
+        term.erase_line()
+
+        term.show_cursor()
         print("\n")

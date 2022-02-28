@@ -32,6 +32,9 @@ def legacy_windows_render(buffer: Iterable[Segment], term: LegacyWindowsTerm) ->
                     term.move_cursor_forward()
                 elif control_type == ControlType.CURSOR_BACKWARD:
                     term.move_cursor_backward()
+                elif control_type == ControlType.CURSOR_MOVE_TO_COLUMN:
+                    _, column = control_code
+                    term.move_cursor_to_column(column - 1)
                 elif control_type == ControlType.HIDE_CURSOR:
                     term.hide_cursor()
                 elif control_type == ControlType.SHOW_CURSOR:
@@ -41,7 +44,6 @@ def legacy_windows_render(buffer: Iterable[Segment], term: LegacyWindowsTerm) ->
                     if mode == 0:
                         term.erase_end_of_line()
                     elif mode == 1:
-                        # TODO
                         term.erase_start_of_line()
                     elif mode == 2:
                         term.erase_line()
