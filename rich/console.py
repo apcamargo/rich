@@ -31,6 +31,8 @@ from typing import (
     cast,
 )
 
+from rich._win32_console import LegacyWindowsTerm
+
 if sys.version_info >= (3, 8):
     from typing import Literal, Protocol, runtime_checkable
 else:
@@ -1913,7 +1915,9 @@ class Console:
                         if self.legacy_windows:
                             from rich._windows_renderer import legacy_windows_render
 
-                            legacy_windows_render(self._buffer[:], self.file)
+                            legacy_windows_render(
+                                self._buffer[:], LegacyWindowsTerm(self.file)
+                            )
                         else:
                             text = self._render_buffer(self._buffer[:])
                             # https://bugs.python.org/issue37871
