@@ -83,12 +83,13 @@ def test_control_erase_to_end_of_line(legacy_term_mock):
     legacy_term_mock.erase_end_of_line.assert_called_once_with()
 
 
-# def test_control_erase_to_start_of_line(legacy_term_mock):
-#     buffer = [Segment("", None, [(ControlType.ERASE_IN_LINE, 1)])]
-#
-#     legacy_windows_render(buffer, legacy_term_mock)
-#
-#     legacy_term_mock.erase_start_of_line.assert_called_once_with()
+@pytest.mark.xfail
+def test_control_erase_to_start_of_line(legacy_term_mock):
+    buffer = [Segment("", None, [(ControlType.ERASE_IN_LINE, 1)])]
+
+    legacy_windows_render(buffer, legacy_term_mock)
+
+    legacy_term_mock.erase_start_of_line.assert_called_once_with()
 
 
 def test_control_erase_whole_line(legacy_term_mock):
