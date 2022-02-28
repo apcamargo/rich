@@ -290,7 +290,7 @@ else:
             Args:
                 new_position (WindowsCoordinates): The WindowsCoordinates representing the new position of the cursor.
             """
-            SetConsoleCursorPosition(self._handle, new_position)
+            SetConsoleCursorPosition(self._handle, coords=new_position)
 
         def erase_line(self) -> None:
             """Erase all content on the line the cursor is currently located at"""
@@ -315,9 +315,8 @@ else:
             """Erase all content from the cursor position to the end of that line"""
             cursor_position = self.cursor_position
             cells_to_erase = self.screen_size.col - cursor_position.col
-            # TODO: We need to fill the console output attributes too, in here and other erase methods
             FillConsoleOutputCharacter(
-                self._handle, " ", cells_to_erase, cursor_position
+                self._handle, " ", length=cells_to_erase, start=cursor_position
             )
             FillConsoleOutputAttribute(
                 self._handle,
@@ -330,7 +329,7 @@ else:
             """Erase all content from the cursor position to the start of that line"""
             row, col = self.cursor_position
             start = WindowsCoordinates(row, 0)
-            FillConsoleOutputCharacter(self._handle, " ", col, start)
+            FillConsoleOutputCharacter(self._handle, " ", length=col, start=start)
             FillConsoleOutputAttribute(
                 self._handle, self._default_attrs, length=col, start=start
             )
@@ -340,7 +339,7 @@ else:
             cursor_position = self.cursor_position
             SetConsoleCursorPosition(
                 self._handle,
-                WindowsCoordinates(
+                coords=WindowsCoordinates(
                     row=cursor_position.row - 1, col=cursor_position.col
                 ),
             )
@@ -350,7 +349,7 @@ else:
             cursor_position = self.cursor_position
             SetConsoleCursorPosition(
                 self._handle,
-                WindowsCoordinates(
+                coords=WindowsCoordinates(
                     row=cursor_position.row + 1,
                     col=cursor_position.col,
                 ),
@@ -364,7 +363,9 @@ else:
                 col = 0
             else:
                 col += 1
-            SetConsoleCursorPosition(self._handle, WindowsCoordinates(row=row, col=col))
+            SetConsoleCursorPosition(
+                self._handle, coords=WindowsCoordinates(row=row, col=col)
+            )
 
         def move_cursor_to_column(self, column: int) -> None:
             """Move cursor to the column specified by the zero-based column index, staying on the same row
@@ -373,7 +374,9 @@ else:
                 column (int): The zero-based column index to move the cursor to.
             """
             row, _ = self.cursor_position
-            SetConsoleCursorPosition(self._handle, WindowsCoordinates(row, column))
+            SetConsoleCursorPosition(
+                self._handle, coords=WindowsCoordinates(row, column)
+            )
 
         def move_cursor_backward(self) -> None:
             """Move the cursor backward a single cell. Wrap to the previous line if required."""
@@ -383,21 +386,19 @@ else:
                 col = self.screen_size.col - 1
             else:
                 col -= 1
-            SetConsoleCursorPosition(self._handle, WindowsCoordinates(row=row, col=col))
+            SetConsoleCursorPosition(
+                self._handle, coords=WindowsCoordinates(row=row, col=col)
+            )
 
         def hide_cursor(self) -> None:
             """Hide the cursor"""
-            blank_cursor = CONSOLE_CURSOR_INFO()
-            blank_cursor.dwSize = 100
-            blank_cursor.bVisible = 0
-            SetConsoleCursorInfo(self._handle, blank_cursor)
+            invisible_cursor = CONSOLE_CURSOR_INFO(dwSize=100, bVisible=0)
+            SetConsoleCursorInfo(self._handle, cursor_info=invisible_cursor)
 
         def show_cursor(self) -> None:
             """Show the cursor"""
-            visible_cursor = CONSOLE_CURSOR_INFO()
-            visible_cursor.dwSize = 100
-            visible_cursor.bVisible = 1
-            SetConsoleCursorInfo(self._handle, visible_cursor)
+            visible_cursor = CONSOLE_CURSOR_INFO(dwSize=100, bVisibile=1)
+            SetConsoleCursorInfo(self._handle, cursor_info=visible_cursor)
 
         def set_title(self, title: str) -> None:
             """Set the title of the terminal window
@@ -433,7 +434,6 @@ else:
         console.print("[italic cyan]italic cyan!")
         console.print("[bold white on blue]bold white on blue!")
         console.print("[bold black on cyan]bold black on cyan!")
-        term.hide_cursor()
         console.print("[black on green]black on green!")
         console.print("[blue on green]blue on green!")
         console.print("[white on black]white on black!")
@@ -450,7 +450,6 @@ else:
         term.move_cursor_up()
         term.write_text("we go up")
         time.sleep(1)
-        term.show_cursor()
         term.move_cursor_down()
         term.write_text("and down")
         time.sleep(1)
