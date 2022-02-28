@@ -1136,7 +1136,7 @@ class Console:
         Args:
             show (bool, optional): Set visibility of the cursor.
         """
-        if self.is_terminal and not self.legacy_windows:
+        if self.is_terminal:
             self.control(Control.show_cursor(show))
             return True
         return False

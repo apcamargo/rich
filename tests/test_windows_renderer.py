@@ -1,4 +1,4 @@
-from unittest.mock import call, create_autospec
+from unittest.mock import PropertyMock, call, create_autospec
 
 import pytest
 
@@ -68,7 +68,7 @@ def test_control_home(legacy_term_mock):
 
 
 @pytest.mark.parametrize(
-    "control_type, legacy_term_method_name",
+    "control_type, method_name",
     [
         (ControlType.CURSOR_UP, "move_cursor_up"),
         (ControlType.CURSOR_DOWN, "move_cursor_down"),
@@ -77,26 +77,42 @@ def test_control_home(legacy_term_mock):
     ],
 )
 def test_control_cursor_single_cell_movement(
-    legacy_term_mock, control_type, legacy_term_method_name
+    legacy_term_mock, control_type, method_name
 ):
     buffer = [Segment("", None, [(control_type,)])]
 
     legacy_windows_render(buffer, legacy_term_mock)
 
-    getattr(legacy_term_mock, legacy_term_method_name).assert_called_once_with()
+    getattr(legacy_term_mock, method_name).assert_called_once_with()
 
 
 @pytest.mark.parametrize(
-    "erase_mode, legacy_term_method_name",
+    "erase_mode, method_name",
     [
         (0, "erase_end_of_line"),
         (1, "erase_start_of_line"),
         (2, "erase_line"),
     ],
 )
-def test_control_erase_line(legacy_term_mock, erase_mode, legacy_term_method_name):
+def test_control_erase_line(legacy_term_mock, erase_mode, method_name):
     buffer = [Segment("", None, [(ControlType.ERASE_IN_LINE, erase_mode)])]
 
     legacy_windows_render(buffer, legacy_term_mock)
 
-    getattr(legacy_term_mock, legacy_term_method_name).assert_called_once_with()
+    getattr(legacy_term_mock, method_name).assert_called_once_with()
+
+
+def test_show_cursor(legacy_term_mock):
+    buffer = [Segment("", None, [(ControlType.SHOW_CURSOR,)])]
+
+    legacy_windows_render(buffer, legacy_term_mock)
+
+    legacy_term_mock.show_cursor.assert_called_once_with()
+
+
+def test_hide_cursor(legacy_term_mock):
+    buffer = [Segment("", None, [(ControlType.HIDE_CURSOR,)])]
+
+    legacy_windows_render(buffer, legacy_term_mock)
+
+    legacy_term_mock.hide_cursor.assert_called_once_with()
