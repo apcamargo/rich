@@ -67,34 +67,36 @@ def test_control_home(legacy_term_mock):
     legacy_term_mock.move_cursor_to.assert_called_once_with(WindowsCoordinates(0, 0))
 
 
-def test_control_cursor_up(legacy_term_mock):
-    buffer = [Segment("", None, [(ControlType.CURSOR_UP,)])]
+@pytest.mark.parametrize(
+    "control_type, legacy_term_method_name",
+    [
+        (ControlType.CURSOR_UP, "move_cursor_up"),
+        (ControlType.CURSOR_DOWN, "move_cursor_down"),
+        (ControlType.CURSOR_FORWARD, "move_cursor_forward"),
+        (ControlType.CURSOR_BACKWARD, "move_cursor_backward"),
+    ],
+)
+def test_control_cursor_single_cell_movement(
+    legacy_term_mock, control_type, legacy_term_method_name
+):
+    buffer = [Segment("", None, [(control_type,)])]
 
     legacy_windows_render(buffer, legacy_term_mock)
 
-    legacy_term_mock.move_cursor_up.assert_called_once_with()
+    getattr(legacy_term_mock, legacy_term_method_name).assert_called_once_with()
 
 
-def test_control_erase_to_end_of_line(legacy_term_mock):
-    buffer = [Segment("", None, [(ControlType.ERASE_IN_LINE, 0)])]
-
-    legacy_windows_render(buffer, legacy_term_mock)
-
-    legacy_term_mock.erase_end_of_line.assert_called_once_with()
-
-
-@pytest.mark.xfail
-def test_control_erase_to_start_of_line(legacy_term_mock):
-    buffer = [Segment("", None, [(ControlType.ERASE_IN_LINE, 1)])]
-
-    legacy_windows_render(buffer, legacy_term_mock)
-
-    legacy_term_mock.erase_start_of_line.assert_called_once_with()
-
-
-def test_control_erase_whole_line(legacy_term_mock):
-    buffer = [Segment("", None, [(ControlType.ERASE_IN_LINE, 2)])]
+@pytest.mark.parametrize(
+    "erase_mode, legacy_term_method_name",
+    [
+        (0, "erase_end_of_line"),
+        (1, "erase_start_of_line"),
+        (2, "erase_line"),
+    ],
+)
+def test_control_erase_line(legacy_term_mock, erase_mode, legacy_term_method_name):
+    buffer = [Segment("", None, [(ControlType.ERASE_IN_LINE, erase_mode)])]
 
     legacy_windows_render(buffer, legacy_term_mock)
 
-    legacy_term_mock.erase_line.assert_called_once_with()
+    getattr(legacy_term_mock, legacy_term_method_name).assert_called_once_with()
